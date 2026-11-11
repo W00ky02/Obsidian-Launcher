@@ -5,9 +5,9 @@
 QString Preferences::path() {return QDir(qEnvironmentVariable("APPDATA")).filePath("ObsidianLauncher/preferences.ini");}
 Preferences Preferences::load() {
     QSettings s(path(),QSettings::IniFormat); Preferences p;
-    p.language=s.value("ui/language","de").toString(); if (p.language!="en") p.language="de";
+    p.language=s.value("ui/language","en").toString(); if (p.language!="en") p.language="de";
     p.theme=s.value("ui/theme","dark").toString(); if (!QStringList{"dark","light","system"}.contains(p.theme)) p.theme="dark";
-    p.accent=s.value("ui/accent","mint").toString(); if (!QStringList{"mint","blue","violet","amber","rose"}.contains(p.accent)) p.accent="mint";
+    p.accent=s.value("ui/accent","violet").toString(); if (!QStringList{"mint","blue","violet","amber","rose"}.contains(p.accent)) p.accent="mint";
     p.microsoftClientId=s.value("auth/clientId").toString();
     p.font=s.value("ui/font","Segoe UI Variable").toString(); if (!QStringList{"Segoe UI Variable","Segoe UI","Calibri","Arial"}.contains(p.font)) p.font="Segoe UI";
     p.design=s.value("ui/design","soft").toString(); if (!QStringList{"soft","sharp","contrast"}.contains(p.design)) p.design="soft";
@@ -17,7 +17,7 @@ Preferences Preferences::load() {
     p.autoShowLogs=s.value("launch/autoShowLogs",true).toBool(); p.lastVersion=s.value("launch/lastVersion").toString();
     p.animations=s.value("ui/animations",true).toBool();p.sidebarWidth=qBound(176,s.value("ui/sidebarWidth",202).toInt(),240);p.contentSpacing=qBound(8,s.value("ui/contentSpacing",16).toInt(),24);
     p.discordPresence=s.value("social/discord",true).toBool();
-    p.showHero=s.value("ui/showHero",true).toBool();p.rememberWindow=s.value("ui/rememberWindow",false).toBool();
+    p.showHero=s.value("ui/showHero",false).toBool();p.rememberWindow=s.value("ui/rememberWindow",false).toBool();
     p.windowWidth=qBound(1020,s.value("ui/windowWidth",1360).toInt(),2560);p.windowHeight=qBound(730,s.value("ui/windowHeight",900).toInt(),1440);
     p.favoritesFirst=s.value("library/favoritesFirst",true).toBool();p.readyOnly=s.value("library/readyOnly",false).toBool();
     p.versionMemory=s.value("launch/versionMemory",false).toBool();p.customResolution=s.value("launch/customResolution",false).toBool();

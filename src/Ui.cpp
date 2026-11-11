@@ -8,6 +8,10 @@
 namespace {
 bool english=false;
 const QMap<QString,QString> translations={
+    {"Abgemeldet.","Signed out."},
+    {"Deine Spiele. Bereit zum Start.","Your games. Ready to play."},
+    {"Wähle deine Anmeldemethode.","Choose how to sign in."},
+    {"Anmeldung","Sign in"},
     {"Offline-Singleplayer: Version auswählen und starten.","Offline singleplayer: select a version and launch."},
     {"Spielernamen eingeben und eine installierte Version aus der Bibliothek starten.","Enter a player name and launch an installed version from the library."},
     {"Offline · Singleplayer","Offline · Singleplayer"},

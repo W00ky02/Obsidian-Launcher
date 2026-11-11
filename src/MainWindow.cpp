@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "UpdatePanel.h"
 #include "DiscordPresence.h"
 #include "LogWindow.h"
 #include "Preferences.h"
@@ -59,7 +60,7 @@ struct Preparation { QString error; };
 MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defaultRoot()),preferences(Preferences::load()) {
     Ui::setLanguage(preferences.language);
     applyTheme(*qApp,preferences.theme,preferences.accent,preferences.font,preferences.textSize,preferences.design);
-    setWindowTitle("Obsidian Launcher · 2.3");resize(1280,860);setMinimumSize(1020,730);
+    setWindowTitle("Obsidian Launcher · 1.0");resize(1280,860);setMinimumSize(1020,730);
     auto *shell=new QWidget;setCentralWidget(shell);
     auto *shellLayout=new QHBoxLayout(shell);shellLayout->setContentsMargins(0,0,0,0);shellLayout->setSpacing(0);
     auto *sidebar=new QFrame;sidebar->setObjectName("sidebar");sidebar->setFixedWidth(preferences.sidebarWidth);
@@ -67,13 +68,14 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     auto *brandRow=new QHBoxLayout;brandRow->setSpacing(10);
     auto *logo=new QLabel;logo->setPixmap(QIcon(":/icons/obsidian.ico").pixmap(30,30));brandRow->addWidget(logo);
     auto *brand=new QLabel("Obsidian");brand->setObjectName("brand");brandRow->addWidget(brand);brandRow->addStretch();side->addLayout(brandRow);
-    auto *build=new QLabel("Launcher 2.3");build->setObjectName("muted");side->addWidget(build);side->addSpacing(30);
+    auto *build=new QLabel("Version 1.0");build->setObjectName("muted");side->addWidget(build);side->addSpacing(30);
     auto *navigation=new QButtonGroup(this);
     auto nav=[&](const QString &text,const QString &name){auto *b=new QPushButton(text);b->setObjectName(name);b->setProperty("nav",true);b->setCheckable(true);navigation->addButton(b);side->addWidget(b);return b;};
     auto *playNav=nav("Bibliothek","playNav");playNav->setChecked(true);
     auto *accountNav=nav("Konto","accountNav");
     auto *settingsNav=nav("Einstellungen","settingsNav");
     auto *toolsNav=nav("Werkzeuge","toolsNav");
+    auto *updatesNav=nav("Updates","updatesNav");
     side->addStretch();auto *consoleNav=new QPushButton("Live-Konsole");consoleNav->setProperty("nav",true);side->addWidget(consoleNav);
     auto *edition=new QLabel("Minecraft Java Edition");edition->setObjectName("eyebrow");side->addWidget(edition);
     auto *content=new QWidget;auto *outer=new QVBoxLayout(content);outer->setContentsMargins(28,26,28,20);outer->setSpacing(12);
@@ -86,14 +88,16 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
         auto *s=new QLabel(subtitle);s->setObjectName("muted");s->setWordWrap(true);s->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);box->addWidget(s);
         scroll->setWidget(body);pages->addWidget(scroll);return box;
     };
-    auto *library=page("Bibliothek","Installierte Minecraft-Versionen verwalten und starten.");
+    auto *library=page("Bibliothek","Deine Spiele. Bereit zum Start.");
     auto *settingsLayout=page("Einstellungen","Darstellung, Spielstart und Integrationen.");
     auto *account=page("Konto","Wähle, wie du Minecraft direkt aus Obsidian startest.");
     auto *tools=page("Werkzeuge","Dateien öffnen und die lokale Installation prüfen.");
+    updates=new UpdatePanel([this]{return !scanning && !preparing && process.state()==QProcess::NotRunning;});pages->addWidget(updates);updates->setLanguage(preferences.language);
+    connect(updatesNav,&QPushButton::clicked,this,[pages]{pages->setCurrentIndex(4);});
     hero=new WorldBanner;auto *heroLayout=new QVBoxLayout(hero);heroLayout->setContentsMargins(22,16,100,16);heroLayout->setSpacing(3);
     auto *heroTitle=new QLabel("Minecraft");heroTitle->setObjectName("hero");heroLayout->addWidget(heroTitle);
     auto *heroCaption=new QLabel("Java Edition · Lokale Installationen");heroCaption->setObjectName("muted");heroLayout->addWidget(heroCaption);library->addWidget(hero);
-    auto *columns=new QHBoxLayout;columns->setSpacing(18);auto *browserColumn=new QVBoxLayout;auto *detailColumn=new QVBoxLayout;columns->addLayout(browserColumn,3);columns->addLayout(detailColumn,2);library->addLayout(columns,1);
+    auto *columns=new QHBoxLayout;columns->setSpacing(18);auto *browserColumn=new QVBoxLayout;auto *detailColumn=new QVBoxLayout;columns->addLayout(browserColumn,5);columns->addLayout(detailColumn,3);library->addLayout(columns,1);
     auto *browser=card(browserColumn,"INSTALLATIONEN","Installierte Versionen");auto *browserBox=qobject_cast<QVBoxLayout*>(browser->layout());
     auto *filters=new QHBoxLayout;versionSearch=new QLineEdit;versionSearch->setObjectName("versionSearch");versionSearch->setPlaceholderText("Versionen durchsuchen …");versionSearch->setClearButtonEnabled(true);filters->addWidget(versionSearch,1);
     loaderFilter=new QComboBox;loaderFilter->setObjectName("loaderFilter");loaderFilter->addItem("Alle Loader","");for(const auto &name:QStringList{"Vanilla","Fabric","Forge","NeoForge","Quilt"})loaderFilter->addItem(name,name);filters->addWidget(loaderFilter);browserBox->addLayout(filters);
@@ -108,14 +112,14 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     refreshButton=new QPushButton("Neu scannen");browserBox->addWidget(refreshButton);
     auto *folder=new QPushButton("Installationsordner öffnen");detailActions->addWidget(folder);detailBox->addLayout(detailActions);
     auto *copyPath=new QPushButton("Pfad kopieren");copyPath->setProperty("quiet",true);detailBox->addWidget(copyPath);connect(copyPath,&QPushButton::clicked,this,[this]{qApp->clipboard()->setText(QDir::toNativeSeparators(root));});detailBox->addStretch();
-    auto *modeCard=card(account,"SPIELSTART","Konto & Startmodus");auto *modeBox=qobject_cast<QVBoxLayout*>(modeCard->layout());modeCard->setMaximumWidth(800);
-    launchMode=new QComboBox;launchMode->setObjectName("launchMode");launchMode->addItem("Microsoft-Konto","normal");launchMode->addItem("Minecraft Access Token","custom");launchMode->addItem("Offline · Singleplayer","offline");launchMode->setCurrentIndex(1);modeBox->addWidget(launchMode);
-    auto *modeHint=new QLabel("1. Anmeldemethode wählen.  2. Konto verbinden.  3. Version in der Bibliothek starten.");modeHint->setObjectName("modeHint");modeHint->setProperty("dynamicText",true);modeHint->setWordWrap(true);modeHint->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);modeBox->addWidget(modeHint);
+    auto *modeCard=card(account,"SPIELSTART","Anmeldung");auto *modeBox=qobject_cast<QVBoxLayout*>(modeCard->layout());modeCard->setMaximumWidth(800);
+    launchMode=new QComboBox;launchMode->setObjectName("launchMode");launchMode->addItem("Minecraft Access Token","custom");launchMode->addItem("Offline · Singleplayer","offline");launchMode->setCurrentIndex(0);modeBox->addWidget(launchMode);
+    auto *modeHint=new QLabel("Wähle deine Anmeldemethode.");modeHint->setObjectName("modeHint");modeHint->setProperty("dynamicText",true);modeHint->setWordWrap(true);modeHint->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);modeBox->addWidget(modeHint);
     normalPanel=new QWidget;normalPanel->setObjectName("normalPanel");auto *normalLayout=new QVBoxLayout(normalPanel);normalLayout->setContentsMargins(0,10,0,0);normalLayout->setSpacing(14);modeBox->addWidget(normalPanel);
     accountState=new QLabel;accountState->setObjectName("accountState");accountState->setProperty("dynamicText",true);accountState->setWordWrap(true);accountState->setTextFormat(Qt::PlainText);modeBox->addWidget(accountState);
     signInButton=new QPushButton("Mit Microsoft anmelden");signInButton->setObjectName("signInButton");signInButton->setProperty("dynamicText",true);normalLayout->addWidget(signInButton);
     signOutButton=new QPushButton("Abmelden");signOutButton->setObjectName("signOutButton");normalLayout->addWidget(signOutButton);
-    auto *officialLaunch=new QPushButton("Offiziellen Launcher öffnen");officialLaunch->setObjectName("officialLaunch");normalLayout->addWidget(officialLaunch);connect(officialLaunch,&QPushButton::clicked,this,&MainWindow::openOfficialLauncher);
+    auto *officialLaunch=new QPushButton("Offiziellen Launcher öffnen");officialLaunch->setObjectName("officialLaunch");javaOverride.clear();modeBox->addWidget(officialLaunch);connect(officialLaunch,&QPushButton::clicked,this,&MainWindow::openOfficialLauncher);
     credentialPanel=new QWidget;credentialPanel->setObjectName("credentialPanel");auto *credentialLayout=new QVBoxLayout(credentialPanel);credentialLayout->setContentsMargins(0,12,0,0);credentialLayout->setSpacing(14);modeBox->addWidget(credentialPanel);
     username=new QLineEdit(credentialPanel);username->setObjectName("username");username->setMaxLength(16);username->setPlaceholderText("Minecraft-Profilname");
     uuid=new QLineEdit(credentialPanel);uuid->setObjectName("uuid");uuid->setMaxLength(36);uuid->setPlaceholderText("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
@@ -180,14 +184,11 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     auto *javaHint=new QLabel("Java wird automatisch gesucht. Eine manuelle Auswahl gilt nur für diese Sitzung.");javaHint->setWordWrap(true);javaHint->setObjectName("muted");javaBox->addWidget(javaHint);
     javaButton=new QPushButton("Java auswählen …");resetJavaButton=new QPushButton("Java-Auswahl zurücksetzen");javaBox->addWidget(javaButton);javaBox->addWidget(resetJavaButton);
     auto *officialButton=new QPushButton("Offiziellen Launcher auswählen …");javaBox->addWidget(officialButton);connect(officialButton,&QPushButton::clicked,this,[this]{const auto file=QFileDialog::getOpenFileName(this,Ui::text("Offiziellen Launcher auswählen …"),{},"Launcher (*.exe *.lnk)");if(!file.isEmpty()){preferences.officialLauncher=file;savePreferences();}});
-    auto *advanced=checkbox(systemLayout,"Entwickler-Einstellungen anzeigen","advanced",false);
-    auto *authSettings=card(systemLayout,"MICROSOFT","Microsoft-Anmeldung");auto *authBox=qobject_cast<QVBoxLayout*>(authSettings->layout());authSettings->setVisible(false);connect(advanced,&QCheckBox::toggled,authSettings,&QWidget::setVisible);
-    auto *authHint=new QLabel("Für den Login wird eine eigene registrierte Microsoft-App mit Minecraft-Freigabe benötigt. Die Client-ID ist öffentlich; kein Passwort oder Client Secret eingeben.");authHint->setWordWrap(true);authHint->setObjectName("muted");authBox->addWidget(authHint);
-    clientIdEdit=new QLineEdit(preferences.microsoftClientId);clientIdEdit->setObjectName("clientIdEdit");clientIdEdit->setMaxLength(36);clientIdEdit->setPlaceholderText("Eigene Microsoft Client-ID");authBox->addWidget(clientIdEdit);systemLayout->addStretch();
+    clientIdEdit=new QLineEdit(this);clientIdEdit->hide();systemLayout->addStretch();
     auto *folders=card(tools,"SCHNELLZUGRIFF","Minecraft-Dateien");auto *folderBox=qobject_cast<QVBoxLayout*>(folders->layout());
     for(const auto &name:QStringList{"mods","resourcepacks","screenshots","saves"}){auto *b=new QPushButton(name);folderBox->addWidget(b);connect(b,&QPushButton::clicked,this,[this,name]{const auto path=QDir(root).filePath(name);if(!QDir().mkpath(path)||!QDesktopServices::openUrl(QUrl::fromLocalFile(path)))status("Ordner konnte nicht geöffnet werden.",true);});}
     auto *diagnosticCard=card(tools,"INSTALLATION","Diagnose");auto *diagnosticBox=qobject_cast<QVBoxLayout*>(diagnosticCard->layout());diagnostics=new QLabel;diagnostics->setObjectName("diagnostics");diagnostics->setProperty("dynamicText",true);diagnostics->setWordWrap(true);diagnostics->setTextFormat(Qt::PlainText);diagnosticBox->addWidget(diagnostics);
-    auto *copyReport=new QPushButton("Diagnose kopieren");diagnosticBox->addWidget(copyReport);connect(copyReport,&QPushButton::clicked,this,[this]{qApp->clipboard()->setText("Obsidian 2.0\n"+QDir::toNativeSeparators(root)+"\n"+diagnostics->text()+"\n"+versionInfo->text()+"\n"+javaPathLabel->fullPath());status("Diagnose kopiert. Keine Zugangsdaten enthalten.");});tools->addStretch();
+    auto *copyReport=new QPushButton("Diagnose kopieren");diagnosticBox->addWidget(copyReport);connect(copyReport,&QPushButton::clicked,this,[this]{qApp->clipboard()->setText("Obsidian 1.0\n"+QDir::toNativeSeparators(root)+"\n"+diagnostics->text()+"\n"+versionInfo->text()+"\n"+javaPathLabel->fullPath());status("Diagnose kopiert. Keine Zugangsdaten enthalten.");});tools->addStretch();
     statusText=new QLabel;statusText->setObjectName("status");statusText->setProperty("dynamicText",true);statusText->setTextFormat(Qt::PlainText);statusText->setWordWrap(true);statusText->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);outer->addWidget(statusText);
     auto *footer=new QFrame;footer->setObjectName("launchBar");auto *actions=new QHBoxLayout(footer);actions->setContentsMargins(0,16,0,0);actions->setSpacing(12);
     auto *logButton=new QPushButton("Konsole");actions->addWidget(logButton);stopButton=new QPushButton("Spiel beenden");actions->addWidget(stopButton);
@@ -214,9 +215,7 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     connect(auth,&AuthClient::stateChanged,this,&MainWindow::updateEnabled);
     connect(auth,&AuthClient::authenticated,this,[this]{token->clear();status("Konto verbunden. Version in der Bibliothek auswählen und starten.");updateEnabled();});
     connect(auth,&AuthClient::failed,this,[this](const QString &message){status(message,true);updateEnabled();});
-    connect(signInButton,&QPushButton::clicked,this,[this]{if(preferences.microsoftClientId.isEmpty())status("Microsoft-Anmeldung ist für Obsidian noch nicht freigeschaltet.",true);else login();});
-    connect(signOutButton,&QPushButton::clicked,this,[this]{auth->signOut();status("Microsoft-Konto abgemeldet.");});
-    connect(clientIdEdit,&QLineEdit::editingFinished,this,[this]{const auto value=clientIdEdit->text().trimmed();if(value!=preferences.microsoftClientId){if(auth->busy() || auth->signedIn())auth->signOut();preferences.microsoftClientId=value;savePreferences();updateEnabled();}});
+    connect(signOutButton,&QPushButton::clicked,this,[this]{auth->signOut();status("Abgemeldet.");});
     credentialPanel->setVisible(true);normalPanel->setVisible(false);
     connect(tokenSignIn,&QPushButton::clicked,this,[this]{auto access=token->text();token->clear();auth->beginToken(access);});
     connect(token,&QLineEdit::returnPressed,tokenSignIn,&QPushButton::click);
@@ -327,7 +326,7 @@ void MainWindow::selectionChanged() {
 }
 void MainWindow::changeMode() {
     const bool custom=launchMode->currentData()=="custom",offline=launchMode->currentData()=="offline";credentialPanel->setVisible(custom);normalPanel->setVisible(!custom && !offline);offlinePanel->setVisible(offline);
-    if(auto *hint=findChild<QLabel*>("modeHint"))hint->setText(Ui::text(offline?"Spielernamen eingeben und eine installierte Version aus der Bibliothek starten.":"1. Anmeldemethode wählen.  2. Konto verbinden.  3. Version in der Bibliothek starten."));
+    if(auto *hint=findChild<QLabel*>("modeHint"))hint->setText(Ui::text(offline?"Spielernamen eingeben und eine installierte Version aus der Bibliothek starten.":"Wähle deine Anmeldemethode."));
     if(!custom){token->clear();status("Konto verbinden → Version auswählen → Minecraft starten.");}
     else selectionChanged();updateEnabled();
 }
@@ -439,6 +438,8 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 void MainWindow::savePreferences() {if(!preferences.save()) status("Einstellungen konnten nicht gespeichert werden. Schreibrechte im Benutzerordner prüfen.",true);}
 void MainWindow::refreshLanguage() {
+    if(updates)updates->setLanguage(preferences.language);
+    if(auto *hint=findChild<QLabel*>("modeHint"))hint->setText(Ui::text(launchMode->currentData()=="offline"?"Spielernamen eingeben und eine installierte Version aus der Bibliothek starten.":"Wähle deine Anmeldemethode."));
     Ui::refresh(centralWidget());if(discord)discordState->setText(Ui::text(discord->status()));if(logs) logs->refreshLanguage();
     const auto saved=lastStatus;const bool error=lastStatusError;
     if(!entries.isEmpty()) selectionChanged();
@@ -476,7 +477,7 @@ void MainWindow::rebuildLibrary() {
     QVector<int> visible;const auto query=versionSearch->text().trimmed();const auto loader=loaderFilter->currentData().toString();
     for(int i=0;i<entries.size();++i){const auto &entry=entries[i];if((preferences.readyOnly&&!entry.ready()) || (!query.isEmpty()&&!entry.id.contains(query,Qt::CaseInsensitive)) || (!loader.isEmpty()&&entry.loader!=loader))continue;visible.append(i);}
     if(preferences.favoritesFirst)std::stable_sort(visible.begin(),visible.end(),[this](int a,int b){return preferences.favorites.contains(entries[a].id)>preferences.favorites.contains(entries[b].id);});
-    for(int index:visible){const auto &entry=entries[index];auto *item=new QListWidgetItem((preferences.favorites.contains(entry.id)?"★  ":"")+entry.id+"\n"+entry.loader+"  ·  "+Ui::text(entry.ready()?"Startbereit":"Unvollständig"),libraryList);item->setData(Qt::UserRole,entry.id);item->setToolTip(entry.error.isEmpty()?entry.id:Ui::text(entry.error));item->setSizeHint(QSize(0,68));if(versions->currentData().toString()==entry.id)libraryList->setCurrentItem(item);}
+    for(int index:visible){const auto &entry=entries[index];auto *item=new QListWidgetItem((preferences.favorites.contains(entry.id)?"★  ":"")+entry.id+"\n"+entry.loader+"  ·  "+Ui::text(entry.ready()?"Startbereit":"Unvollständig"),libraryList);item->setData(Qt::UserRole,entry.id);item->setToolTip(entry.error.isEmpty()?entry.id:Ui::text(entry.error));item->setSizeHint(QSize(0,82));if(versions->currentData().toString()==entry.id)libraryList->setCurrentItem(item);}
     int ready=0;for(const auto &entry:entries)if(entry.ready())++ready;
     countLabel->setText(Ui::text("%1 angezeigt  ·  %2 startbereit  ·  %3 installiert").arg(visible.size()).arg(ready).arg(entries.size()));
     diagnostics->setText(Ui::text("%1 Profile gefunden. %2 startbereit. %3 benötigen eine Reparatur oder passende Java-Runtime.").arg(entries.size()).arg(ready).arg(entries.size()-ready));

@@ -1,6 +1,6 @@
 # Launch behavior
 
-Obsidian starts an installed Minecraft Java profile as a child process and shows its output in the live console. Token sign-in retrieves the profile name and UUID from Minecraft Services. Microsoft sign-in needs a registered and approved client ID and is not configured in this release. Offline singleplayer creates a local identity without contacting the profile service.
+Obsidian starts an installed Minecraft Java profile as a child process and shows its output in the live console. Token sign-in retrieves the profile name and UUID from Minecraft Services. Microsoft sign-in is not offered in version 1.0. Offline singleplayer creates a local identity without contacting the profile service.
 
 The separate option to open the official launcher is a fallback. That launcher handles its own sign-in, game processes, and logs; Obsidian does not track those games.
 

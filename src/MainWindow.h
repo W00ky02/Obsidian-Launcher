@@ -19,6 +19,7 @@ class PathLabel;
 class QListWidget;
 class WorldBanner;
 class DiscordPresence;
+class UpdatePanel;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -42,6 +43,7 @@ private:
     void stop();
     void savePreferences();
     void refreshLanguage();
+    UpdatePanel *updates=nullptr;
     Preferences preferences;
     QString lastStatus;
     bool lastStatusError=false;

@@ -56,7 +56,7 @@ private slots:
         write("versions/test/test.jar","test jar");write("assets/indexes/test.json",R"({"objects":{}})");
         const auto runtime=root+"/runtime/test-runtime/bin";QVERIFY(QDir().mkpath(runtime));QVERIFY(QFile::copy(qEnvironmentVariable("MOCK_JAVA_EXE"),runtime+"/java.exe"));
         const auto core=QCoreApplication::applicationDirPath()+"/Qt6Core.dll";if(QFileInfo::exists(core))QVERIFY(QFile::copy(core,runtime+"/Qt6Core.dll"));
-        Preferences preferences;preferences.microsoftClientId=clientId;preferences.autoShowLogs=false;QVERIFY(preferences.save());
+        Preferences preferences;preferences.language="de";preferences.microsoftClientId=clientId;preferences.autoShowLogs=false;QVERIFY(preferences.save());
         FakeIdentity service;MainWindow window(service.endpoints());window.setAttribute(Qt::WA_DontShowOnScreen);window.findChild<LogWindow*>()->setAttribute(Qt::WA_DontShowOnScreen);window.show();
         auto *button=window.findChild<QPushButton*>("primary");QTRY_COMPARE_WITH_TIMEOUT(window.findChild<QComboBox*>("versions")->count(),1,12000);QVERIFY(!button->isEnabled());
         auto *auth=window.findChild<AuthClient*>();QVERIFY(auth);auth->begin(clientId);QTRY_VERIFY_WITH_TIMEOUT(auth->signedIn(),8000);QVERIFY(button->isEnabled());

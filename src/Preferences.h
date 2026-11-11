@@ -3,7 +3,7 @@
 #include <QStringList>
 #include <QMap>
 struct Preferences {
-    QString language="de", theme="dark", accent="mint", lastVersion;
+    QString language="en", theme="dark", accent="violet", lastVersion;
     QString microsoftClientId;
     QString font="Segoe UI Variable", design="soft", officialLauncher;
     QStringList favorites;
@@ -13,7 +13,7 @@ struct Preferences {
     bool discordPresence=true;
     bool animations=true;
     int sidebarWidth=202,contentSpacing=16;
-    bool showHero=true,rememberWindow=false,favoritesFirst=true,readyOnly=false;
+    bool showHero=false,rememberWindow=false,favoritesFirst=true,readyOnly=false;
     bool versionMemory=false,customResolution=false,fullscreen=false,minimizeOnLaunch=false,logFollow=true;
     int resolutionWidth=1280,resolutionHeight=720,logLimit=8000,windowWidth=1360,windowHeight=900;
     QMap<QString,int> versionRam;

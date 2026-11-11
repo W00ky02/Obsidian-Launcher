@@ -45,6 +45,7 @@ private slots:
         QCOMPARE(Minecraft::defaultRoot(),root);
         const auto inspected=Minecraft::scan(root);
         QCOMPARE(inspected.size(),1); QVERIFY2(inspected[0].ready(),qPrintable(inspected[0].error));
+        Preferences initial;initial.language="de";QVERIFY(initial.save());
         FakeIdentity service;MainWindow window(service.endpoints()); window.setAttribute(Qt::WA_DontShowOnScreen);
         window.findChild<LogWindow*>()->setAttribute(Qt::WA_DontShowOnScreen); window.show();
         auto *launch=window.findChild<QPushButton*>("primary"); auto *status=window.findChild<QLabel*>("status");
@@ -56,10 +57,9 @@ private slots:
         auto *search=window.findChild<QLineEdit*>("versionSearch");search->setText("nothing-installed");QCOMPARE(list->count(),0);search->clear();QCOMPARE(list->count(),1);
         auto *filter=window.findChild<QComboBox*>("loaderFilter");filter->setCurrentIndex(filter->findData("Fabric"));QCOMPARE(list->count(),0);filter->setCurrentIndex(0);QCOMPARE(list->count(),1);
         QTest::mouseClick(window.findChild<QPushButton*>("accountNav"),Qt::LeftButton);
-        QTest::mouseClick(window.findChild<QPushButton*>("signInButton"),Qt::LeftButton);
-        QVERIFY(status->text().contains("freigeschaltet"));QCOMPARE(window.findChild<QStackedWidget*>("pages")->currentIndex(),2);
-        window.findChild<QComboBox*>("launchMode")->setCurrentIndex(1);QVERIFY(!launch->isEnabled());
-        window.findChild<QComboBox*>("launchMode")->setCurrentIndex(0);
+        auto *modes=window.findChild<QComboBox*>("launchMode");
+        QCOMPARE(modes->count(),2);QCOMPARE(modes->findData("normal"),-1);
+        QCOMPARE(modes->currentData().toString(),QString("custom"));
         QTest::mouseClick(window.findChild<QPushButton*>("playNav"),Qt::LeftButton);
         const QString preview=qEnvironmentVariable("OBSIDIAN_PREVIEW_DIR");
         if (!preview.isEmpty()) {QDir().mkpath(preview); QVERIFY(window.grab().save(preview+"/launcher-preview.png"));}
@@ -71,7 +71,7 @@ private slots:
             QTest::mouseClick(window.findChild<QPushButton*>("toolsNav"),Qt::LeftButton);QApplication::processEvents();QVERIFY(window.grab().save(preview+"/tools-preview.png"));
             QTest::mouseClick(window.findChild<QPushButton*>("playNav"),Qt::LeftButton);
         }
-        window.findChild<QComboBox*>("launchMode")->setCurrentIndex(1);
+        window.findChild<QComboBox*>("launchMode")->setCurrentIndex(0);
         QTest::mouseClick(launch,Qt::LeftButton); QVERIFY(!launch->isEnabled());
         QTest::mouseClick(window.findChild<QPushButton*>("accountNav"),Qt::LeftButton);
         QTRY_VERIFY(token->isVisible());QVERIFY(!name->isVisible());QVERIFY(!uuid->isVisible());QApplication::processEvents();
@@ -118,7 +118,7 @@ private slots:
         logs->hide();connectToken("settings-test-token");QTRY_COMPARE(name->text(),QString("Player_One"));QTest::mouseClick(launch,Qt::LeftButton);
         QTRY_VERIFY_WITH_TIMEOUT(token->text().isEmpty(),12000);QTRY_VERIFY_WITH_TIMEOUT(launch->isEnabled(),12000);QVERIFY(!logs->isVisible());
         window.findChild<QComboBox*>("launchMode")->setCurrentIndex(0);QVERIFY(!name->isVisible());QTest::mouseClick(window.findChild<QPushButton*>("signOutButton"),Qt::LeftButton);QVERIFY(!launch->isEnabled());
-        const auto requestsBefore=service.requests.size();window.findChild<QComboBox*>("launchMode")->setCurrentIndex(2);QVERIFY(!launch->isEnabled());
+        const auto requestsBefore=service.requests.size();window.findChild<QComboBox*>("launchMode")->setCurrentIndex(1);QVERIFY(!launch->isEnabled());
         window.findChild<QLineEdit*>("offlineName")->setText("Player_Offline");QVERIFY(launch->isEnabled());QTest::mouseClick(window.findChild<QPushButton*>("accountNav"),Qt::LeftButton);QApplication::processEvents();if(!preview.isEmpty())QVERIFY(window.grab().save(preview+"/offline-preview.png"));QTest::mouseClick(launch,Qt::LeftButton);QTRY_VERIFY_WITH_TIMEOUT(status->text().contains("wurde beendet") || status->text().contains("has exited"),12000);QCOMPARE(service.requests.size(),requestsBefore);QVERIFY(!window.findChild<AuthClient*>()->signedIn());
         window.findChild<QComboBox*>("launchMode")->setCurrentIndex(0);
         auto normalPrefs=Preferences::load();normalPrefs.officialLauncher=root+"/runtime/java-runtime-delta/bin/java.exe";QVERIFY(normalPrefs.save());
@@ -133,12 +133,12 @@ private slots:
         // Normal launch is also available with no installed Java profiles.
         qputenv("APPDATA",(temp.path()+"/EmptyAppData").toUtf8());
         MainWindow empty;empty.setAttribute(Qt::WA_DontShowOnScreen);
-        QTRY_VERIFY_WITH_TIMEOUT(empty.findChild<QLabel*>("status")->text().contains("Keine Versionen"),12000);
+        QTRY_VERIFY_WITH_TIMEOUT(empty.findChild<QLabel*>("status")->text().contains("No versions"),12000);
         QVERIFY(!empty.findChild<QPushButton*>("primary")->isEnabled());
         // Exercise the reported problem at minimum width and maximum supported text size.
         Ui::setLanguage("en");window.resize(1020,730);window.findChild<QSpinBox*>("textSizeChoice")->setValue(18);
         QTest::mouseClick(window.findChild<QPushButton*>("playNav"),Qt::LeftButton);
-        window.findChild<QComboBox*>("launchMode")->setCurrentIndex(1);QApplication::processEvents();
+        window.findChild<QComboBox*>("launchMode")->setCurrentIndex(0);QApplication::processEvents();
         auto *path=dynamic_cast<PathLabel*>(window.findChild<QLabel*>("path"));QVERIFY(path);
         QVERIFY(!path->wordWrap());QCOMPARE(path->toolTip(),QDir::toNativeSeparators(root));
         QVERIFY(path->fontMetrics().horizontalAdvance(path->text())<=path->contentsRect().width());
