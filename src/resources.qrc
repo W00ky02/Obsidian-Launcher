@@ -1,0 +1,6 @@
+<RCC><qresource prefix="/icons">
+  <file alias="obsidian.ico">icons/obsidian.ico</file>
+  <file alias="chevron.xpm">icons/chevron.xpm</file>
+  <file alias="check.xpm">icons/check.xpm</file>
+<file alias="chevron-up.xpm">icons/chevron-up.xpm</file>
+</qresource></RCC>

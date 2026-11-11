@@ -1,0 +1,14 @@
+build/
+build-*/
+dist/
+*.user
+.vs/
+CMakeUserPresets.json
+*.exe
+*.dll
+*.pdb
+*.zip
+.env
+.env.*
+preferences.ini
+*.log
