@@ -20,6 +20,7 @@ class QListWidget;
 class WorldBanner;
 class DiscordPresence;
 class UpdatePanel;
+class PlayerPreview;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -43,6 +44,7 @@ private:
     void stop();
     void savePreferences();
     void refreshLanguage();
+    PlayerPreview *playerPreview=nullptr;
     UpdatePanel *updates=nullptr;
     Preferences preferences;
     QString lastStatus;

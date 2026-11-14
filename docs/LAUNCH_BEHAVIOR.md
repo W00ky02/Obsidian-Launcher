@@ -42,3 +42,7 @@ The activity shows launcher or game state, profile and loader, and elapsed play 
 The existing 2.3 tests cover synthetic profiles, mock Java child processes, argument construction, log redaction, interface settings and layout, authentication with a local test server, and Discord IPC with a local test server.
 
 Real Minecraft launches, real token or Microsoft sign-in, real Discord activity, and a full installer or upgrade run have not been verified in the development environment.
+
+## Player preview
+
+The dashboard loads the active skin texture from textures.minecraft.net over HTTPS. Requests carry no account token. Skin images and profile details stay in memory. Offline players and unavailable skins use a neutral avatar. The preview is a flat front view, with optional idle motion. Page transitions and preview motion can be disabled in Settings.

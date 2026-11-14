@@ -21,6 +21,12 @@
 class AuthTests:public QObject {
     Q_OBJECT
 private slots:
+    void skinSessionLifecycle(){
+        FakeIdentity service;const QUrl skin("https://textures.minecraft.net/texture/"+QString(64,'a'));
+        service.skins=QJsonArray{QJsonObject{{"state","ACTIVE"},{"url",skin.toString()}}};AuthClient auth(nullptr,service.endpoints());
+        auth.beginToken("test-skin-token");QTRY_VERIFY(auth.signedIn());QCOMPARE(auth.skinUrl(),skin);auth.signOut();QVERIFY(auth.skinUrl().isEmpty());
+        service.skins={};auth.beginToken("test-no-skin-token");QTRY_VERIFY(auth.signedIn());QVERIFY(auth.skinUrl().isEmpty());
+    }
     void tokenOnlyLogin(){
         FakeIdentity service;AuthClient auth(nullptr,service.endpoints());QSignalSpy done(&auth,&AuthClient::authenticated),failed(&auth,&AuthClient::failed);
         auth.beginToken("test-minecraft-secret");QTRY_COMPARE(done.size(),1);QCOMPARE(service.requests,QStringList{"/profile"});QCOMPARE(auth.credentials().username,QString("Player_One"));QCOMPARE(auth.credentials().uuid,QString(clientId).remove('-'));

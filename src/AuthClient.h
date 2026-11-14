@@ -30,6 +30,7 @@ public:
     bool busy() const {return active;}
     bool signedIn() const {return !session.token.isEmpty() && QDateTime::currentDateTimeUtc()<sessionExpires;}
     Minecraft::Credentials credentials() const {return signedIn()?session:Minecraft::Credentials{};}
+    QUrl skinUrl() const {return signedIn()?skin:QUrl();}
 signals:
     void deviceReady(const QUrl &url,const QString &code);
     void authenticated();
@@ -50,6 +51,7 @@ private:
     QTimer timer;
     QPointer<QNetworkReply> pending;
     QString client,deviceCode;
+    QUrl skin;
     Minecraft::Credentials session;
     QDateTime deadline,sessionExpires;
     int interval=5;

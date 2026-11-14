@@ -8,7 +8,7 @@
 [Setup]
 AppId={{6D964CAB-6450-45F6-A095-31CC146B7D17}
 AppName=Obsidian Launcher
-AppVersion=1.0.0
+AppVersion=1.1.0
 AppPublisher=Obsidian
 DefaultDirName={autopf}\Obsidian Launcher
 DefaultGroupName=Obsidian Launcher
@@ -23,7 +23,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 OutputDir={#InstallerOutput}
-OutputBaseFilename=Obsidian-Launcher-v1.0.0-setup
+OutputBaseFilename=Obsidian-Launcher-v1.1.0-setup
 SetupIconFile={#PackageDir}\obsidian.ico
 UninstallDisplayIcon={app}\obsidian.ico
 Compression=lzma2
@@ -71,11 +71,11 @@ begin
     WizardForm.DirEdit.Text := PreviousDirectory;
     if ActiveLanguage = 'german' then begin
       WizardForm.WelcomeLabel1.Caption := 'Obsidian Launcher aktualisieren';
-      WizardForm.WelcomeLabel2.Caption := 'Die vorhandene Installation wird auf Version 1.0 aktualisiert.' + #13#10 + #13#10 +
+      WizardForm.WelcomeLabel2.Caption := 'Die vorhandene Installation wird auf Version 1.1 aktualisiert.' + #13#10 + #13#10 +
         'Installationsordner und Verknüpfungen bleiben erhalten. Deine Minecraft-Dateien werden nicht verändert.';
     end else begin
       WizardForm.WelcomeLabel1.Caption := 'Update Obsidian Launcher';
-      WizardForm.WelcomeLabel2.Caption := 'Your existing installation will be updated to version 1.0.' + #13#10 + #13#10 +
+      WizardForm.WelcomeLabel2.Caption := 'Your existing installation will be updated to version 1.1.' + #13#10 + #13#10 +
         'The installation folder and shortcuts are preserved. Your Minecraft files are not changed.';
     end;
   end;

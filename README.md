@@ -9,6 +9,7 @@ A Minecraft Java Edition launcher for Windows. Pick an installed version, sign i
 - Local Vanilla, Fabric, Forge, NeoForge, and Quilt profiles
 - Token sign-in and offline singleplayer
 - Live logs, memory settings, and Discord Rich Presence
+- Player dashboard with a skin preview and optional animations
 - Customizable themes and layout, in English or German
 - Automatic update checks, with verified downloads and an install button
 

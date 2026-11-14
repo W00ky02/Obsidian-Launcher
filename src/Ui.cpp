@@ -8,6 +8,15 @@
 namespace {
 bool english=false;
 const QMap<QString,QString> translations={
+    {"Offizieller\nLauncher","Official\nlauncher"},
+    {"Willkommen bei Obsidian","Welcome to Obsidian"},
+    {"Hallo, %1","Hey, %1"},
+    {"Offline-Singleplayer · Deine lokale Identität","Offline singleplayer · Your local identity"},
+    {"Angemeldet · Bereit zum Spielen","Signed in · Ready to play"},
+    {"Verbinde dein Konto oder spiele offline.","Connect your account or play offline."},
+    {"Filter zurücksetzen","Reset filters"},
+    {"Noch keine Installationen. Installiere Minecraft zuerst im offiziellen Launcher.","No installations yet. Install Minecraft in the official launcher first."},
+    {"Keine Treffer. Versuche andere Filter.","No matches. Try changing your filters."},
     {"Abgemeldet.","Signed out."},
     {"Deine Spiele. Bereit zum Start.","Your games. Ready to play."},
     {"Wähle deine Anmeldemethode.","Choose how to sign in."},

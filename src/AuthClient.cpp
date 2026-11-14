@@ -18,7 +18,7 @@ void AuthClient::cancel() {
     if(pending){disconnect(pending,nullptr,this,nullptr);pending->abort();pending->deleteLater();pending=nullptr;}
     emit stateChanged();
 }
-void AuthClient::signOut(){cancel();session={};sessionExpires={};emit stateChanged();}
+void AuthClient::signOut(){skin={};cancel();session={};sessionExpires={};emit stateChanged();}
 void AuthClient::fail(const QString &message){cancel();emit failed(message);}
 void AuthClient::request(const QUrl &url,const QByteArray &body,const QByteArray &contentType,const QString &bearer,Callback callback) {
     if(!active)return;
@@ -107,6 +107,7 @@ void AuthClient::profile(const QString &access,int expires) {
         if(!ok(code)){fail("Minecraft-Profil konnte nicht geladen werden.");return;}
         try {session=Minecraft::validateCredentials({obj.value("name").toString(),obj.value("id").toString(),access});}
         catch(const Minecraft::Error &){fail("Anmeldung: Ungültige Profildaten.");return;}
+        skin={};for(const auto &value:obj.value("skins").toArray()){const auto item=value.toObject();if(item.value("state").toString()=="ACTIVE"){skin=QUrl(item.value("url").toString());break;}}
         sessionExpires=QDateTime::currentDateTimeUtc().addSecs(qMax(1,qMin(expires,86400)-60));
         active=false;client.clear();deviceCode.clear();timer.stop();emit stateChanged();emit authenticated();
     });

@@ -12,7 +12,7 @@ After building and deploying the Windows package, compile `Obsidian.iss` with In
 ISCC.exe /DPackageDir="C:\path\to\dist" /DInstallerOutput="C:\path\to\release" .\installer\Obsidian.iss
 ```
 
-Without overrides, the script expects a `Windows` folder two levels above `installer` and places the setup file alongside it. The script produces `Obsidian-Launcher-v1.0.0-setup.exe`.
+Without overrides, the script expects a `Windows` folder two levels above `installer` and places the setup file alongside it. The script produces `Obsidian-Launcher-v1.1.0-setup.exe`.
 
 ## Updates
 

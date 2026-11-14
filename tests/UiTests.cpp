@@ -54,7 +54,8 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(window.findChild<QComboBox*>("versions")->count()==1,12000);
         QVERIFY(!launch->isEnabled());
         auto *list=window.findChild<QListWidget*>("libraryList");QVERIFY(list);QCOMPARE(list->count(),1);
-        auto *search=window.findChild<QLineEdit*>("versionSearch");search->setText("nothing-installed");QCOMPARE(list->count(),0);search->clear();QCOMPARE(list->count(),1);
+        auto *search=window.findChild<QLineEdit*>("versionSearch");search->setText("nothing-installed");QCOMPARE(list->count(),0);QVERIFY(window.findChild<QLabel*>("emptyLibrary")->isVisible());window.findChild<QPushButton*>("resetFilters")->click();QCOMPARE(list->count(),1);QVERIFY(window.findChild<QLabel*>("emptyLibrary")->isHidden());
+        QCOMPARE(window.findChild<QPushButton*>("officialLaunch")->parentWidget()->objectName(),QString("sidebar"));
         auto *filter=window.findChild<QComboBox*>("loaderFilter");filter->setCurrentIndex(filter->findData("Fabric"));QCOMPARE(list->count(),0);filter->setCurrentIndex(0);QCOMPARE(list->count(),1);
         QTest::mouseClick(window.findChild<QPushButton*>("accountNav"),Qt::LeftButton);
         auto *modes=window.findChild<QComboBox*>("launchMode");
@@ -78,6 +79,8 @@ private slots:
         if (!preview.isEmpty()) QVERIFY(window.grab().save(preview+"/account-preview.png"));
         auto connectToken=[&](const QString &value){token->setText(value);QTest::mouseClick(window.findChild<QPushButton*>("tokenSignIn"),Qt::LeftButton);};
         connectToken("synthetic-secret-token");QTRY_VERIFY(launch->isEnabled());QCOMPARE(name->text(),QString("Player_One"));QVERIFY(token->text().isEmpty());
+        QCOMPARE(window.findChild<QLabel*>("dashboardName")->text(),QString("Hallo, Player_One"));QVERIFY(window.findChild<QLabel*>("dashboardHint")->text().contains("Angemeldet"));
+        if(!preview.isEmpty()){QTest::mouseClick(window.findChild<QPushButton*>("playNav"),Qt::LeftButton);QApplication::processEvents();QVERIFY(window.grab().save(preview+"/dashboard-signed-in.png"));}
         QTest::mouseClick(launch,Qt::LeftButton);
         QTRY_VERIFY_WITH_TIMEOUT(token->text().isEmpty(),12000);
         QTRY_VERIFY_WITH_TIMEOUT(launch->isEnabled(),12000);

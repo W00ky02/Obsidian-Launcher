@@ -26,7 +26,7 @@
 
 class UpdatePanel : public QWidget {
 public:
-    static constexpr auto currentVersion="1.0.0";
+    static constexpr auto currentVersion="1.1.0";
     struct Release { QString version, url, digest; qint64 size=0; };
     static bool parseRelease(const QJsonObject &o, Release &r) {
         if(o.value("draft").toBool() || o.value("prerelease").toBool())return false;
@@ -47,7 +47,7 @@ public:
         if(testServer.scheme()=="http" && testServer.host()=="127.0.0.1" && qApp->property("disableDiscordForTests").toBool())testBase=testServer;
         setObjectName("updatePanel");auto *box=new QVBoxLayout(this);box->setContentsMargins(0,16,0,16);box->setSpacing(16);
         heading=new QLabel;heading->setObjectName("pageTitle");box->addWidget(heading);
-        version=new QLabel("Obsidian Launcher 1.0");box->addWidget(version);
+        version=new QLabel("Obsidian Launcher 1.1");box->addWidget(version);
         message=new QLabel;message->setWordWrap(true);message->setObjectName("updateStatus");box->addWidget(message);
         progress=new QProgressBar;progress->setRange(0,100);progress->hide();box->addWidget(progress);
         check=new QPushButton;check->setObjectName("checkUpdates");box->addWidget(check);
@@ -79,7 +79,7 @@ private:
         else message->setText(trText("The update could not be completed. Check your connection and try again.","Das Update konnte nicht abgeschlossen werden. Prüfe deine Verbindung und versuche es erneut."));
     }
     void fail(){busy=false;ready=false;check->setEnabled(true);action->hide();progress->hide();if(file.isOpen())file.close();if(!partial.isEmpty())QFile::remove(partial);state="error";render();}
-    QNetworkRequest request(const QUrl &url){QNetworkRequest req(url);req.setRawHeader("User-Agent","ObsidianLauncher/1.0.0");req.setTransferTimeout(30000);req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::NoLessSafeRedirectPolicy);return req;}
+    QNetworkRequest request(const QUrl &url){QNetworkRequest req(url);req.setRawHeader("User-Agent","ObsidianLauncher/1.1.0");req.setTransferTimeout(30000);req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,QNetworkRequest::NoLessSafeRedirectPolicy);return req;}
     void checkNow(){
         if(busy)return;busy=true;ready=false;action->hide();check->setEnabled(false);state="checking";render();
         reply=network.get(request(testBase.isEmpty()?QUrl("https://api.github.com/repos/W00ky02/Obsidian-Launcher/releases/latest"):testBase.resolved(QUrl("/release"))));

@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "UpdatePanel.h"
+#include "PlayerPreview.h"
 #include "DiscordPresence.h"
 #include "LogWindow.h"
 #include "Preferences.h"
@@ -60,7 +61,7 @@ struct Preparation { QString error; };
 MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defaultRoot()),preferences(Preferences::load()) {
     Ui::setLanguage(preferences.language);
     applyTheme(*qApp,preferences.theme,preferences.accent,preferences.font,preferences.textSize,preferences.design);
-    setWindowTitle("Obsidian Launcher · 1.0");resize(1280,860);setMinimumSize(1020,730);
+    setWindowTitle("Obsidian Launcher · 1.1");resize(1280,860);setMinimumSize(1020,730);
     auto *shell=new QWidget;setCentralWidget(shell);
     auto *shellLayout=new QHBoxLayout(shell);shellLayout->setContentsMargins(0,0,0,0);shellLayout->setSpacing(0);
     auto *sidebar=new QFrame;sidebar->setObjectName("sidebar");sidebar->setFixedWidth(preferences.sidebarWidth);
@@ -68,7 +69,7 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     auto *brandRow=new QHBoxLayout;brandRow->setSpacing(10);
     auto *logo=new QLabel;logo->setPixmap(QIcon(":/icons/obsidian.ico").pixmap(30,30));brandRow->addWidget(logo);
     auto *brand=new QLabel("Obsidian");brand->setObjectName("brand");brandRow->addWidget(brand);brandRow->addStretch();side->addLayout(brandRow);
-    auto *build=new QLabel("Version 1.0");build->setObjectName("muted");side->addWidget(build);side->addSpacing(30);
+    auto *build=new QLabel("Version 1.1");build->setObjectName("muted");side->addWidget(build);side->addSpacing(30);
     auto *navigation=new QButtonGroup(this);
     auto nav=[&](const QString &text,const QString &name){auto *b=new QPushButton(text);b->setObjectName(name);b->setProperty("nav",true);b->setCheckable(true);navigation->addButton(b);side->addWidget(b);return b;};
     auto *playNav=nav("Bibliothek","playNav");playNav->setChecked(true);
@@ -97,13 +98,23 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     hero=new WorldBanner;auto *heroLayout=new QVBoxLayout(hero);heroLayout->setContentsMargins(22,16,100,16);heroLayout->setSpacing(3);
     auto *heroTitle=new QLabel("Minecraft");heroTitle->setObjectName("hero");heroLayout->addWidget(heroTitle);
     auto *heroCaption=new QLabel("Java Edition · Lokale Installationen");heroCaption->setObjectName("muted");heroLayout->addWidget(heroCaption);library->addWidget(hero);
+    auto *profileCard=new QFrame;profileCard->setObjectName("profileCard");
+    auto *profileRow=new QHBoxLayout(profileCard);profileRow->setContentsMargins(20,10,20,10);profileRow->setSpacing(20);
+    playerPreview=new PlayerPreview;profileRow->addWidget(playerPreview);
+    auto *profileText=new QVBoxLayout;auto *profileTitle=new QLabel;profileTitle->setObjectName("dashboardName");profileTitle->setProperty("dynamicText",true);profileTitle->setTextFormat(Qt::PlainText);profileTitle->setWordWrap(true);profileText->addWidget(profileTitle);
+    auto *profileHint=new QLabel;profileHint->setObjectName("dashboardHint");profileHint->setProperty("dynamicText",true);profileHint->setWordWrap(true);profileText->addWidget(profileHint);profileRow->addLayout(profileText,1);
+    auto *profileAccount=new QPushButton("Konto");profileRow->addWidget(profileAccount);connect(profileAccount,&QPushButton::clicked,this,[pages,accountNav]{pages->setCurrentIndex(2);accountNav->setChecked(true);});library->addWidget(profileCard);
     auto *columns=new QHBoxLayout;columns->setSpacing(18);auto *browserColumn=new QVBoxLayout;auto *detailColumn=new QVBoxLayout;columns->addLayout(browserColumn,5);columns->addLayout(detailColumn,3);library->addLayout(columns,1);
     auto *browser=card(browserColumn,"INSTALLATIONEN","Installierte Versionen");auto *browserBox=qobject_cast<QVBoxLayout*>(browser->layout());
     auto *filters=new QHBoxLayout;versionSearch=new QLineEdit;versionSearch->setObjectName("versionSearch");versionSearch->setPlaceholderText("Versionen durchsuchen …");versionSearch->setClearButtonEnabled(true);filters->addWidget(versionSearch,1);
     loaderFilter=new QComboBox;loaderFilter->setObjectName("loaderFilter");loaderFilter->addItem("Alle Loader","");for(const auto &name:QStringList{"Vanilla","Fabric","Forge","NeoForge","Quilt"})loaderFilter->addItem(name,name);filters->addWidget(loaderFilter);browserBox->addLayout(filters);
+    auto *resetFilters=new QPushButton("Filter zurücksetzen");resetFilters->setObjectName("resetFilters");resetFilters->setProperty("quiet",true);browserBox->addWidget(resetFilters);
+    connect(resetFilters,&QPushButton::clicked,this,[this]{versionSearch->clear();loaderFilter->setCurrentIndex(0);if(auto *ready=findChild<QCheckBox*>("readyOnly"))ready->setChecked(false);});
     versions=new QComboBox;versions->setObjectName("versions");versions->setProperty("dynamicText",true);versions->setMinimumContentsLength(16);versions->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
     libraryList=new QListWidget;libraryList->setObjectName("libraryList");libraryList->setMinimumHeight(220);libraryList->setTextElideMode(Qt::ElideRight);libraryList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);browserBox->addWidget(libraryList,1);
     countLabel=new QLabel;countLabel->setObjectName("muted");countLabel->setWordWrap(true);countLabel->setProperty("dynamicText",true);browserBox->addWidget(countLabel);
+    auto *emptyLibrary=new QLabel;emptyLibrary->setObjectName("emptyLibrary");emptyLibrary->setProperty("dynamicText",true);emptyLibrary->setWordWrap(true);emptyLibrary->setTextFormat(Qt::PlainText);browserBox->insertWidget(2,emptyLibrary);
+    auto *searchKey=new QShortcut(QKeySequence("Ctrl+F"),this);connect(searchKey,&QShortcut::activated,this,[pages,playNav,this]{pages->setCurrentIndex(0);playNav->setChecked(true);versionSearch->setFocus();versionSearch->selectAll();});
     auto *details=card(detailColumn,"AUSGEWÄHLTE VERSION","Startkonfiguration");auto *detailBox=qobject_cast<QVBoxLayout*>(details->layout());detailBox->addWidget(versions);auto *libraryAccount=new QLabel;libraryAccount->setObjectName("libraryAccount");libraryAccount->setProperty("dynamicText",true);libraryAccount->setWordWrap(true);detailBox->addWidget(libraryAccount);auto *accountLink=new QPushButton("Konto verbinden / wechseln");detailBox->addWidget(accountLink);connect(accountLink,&QPushButton::clicked,this,[pages,accountNav]{pages->setCurrentIndex(2);accountNav->setChecked(true);});
     versionInfo=new QLabel;versionInfo->setObjectName("versionInfo");versionInfo->setProperty("dynamicText",true);versionInfo->setWordWrap(true);versionInfo->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);versionInfo->setTextFormat(Qt::PlainText);detailBox->addWidget(versionInfo);
     javaPathLabel=new PathLabel;javaPathLabel->setObjectName("javaPath");auto *javaCaption=new QLabel("Java-Runtime");javaCaption->setObjectName("muted");detailBox->addWidget(javaCaption);detailBox->addWidget(javaPathLabel);
@@ -119,7 +130,7 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     accountState=new QLabel;accountState->setObjectName("accountState");accountState->setProperty("dynamicText",true);accountState->setWordWrap(true);accountState->setTextFormat(Qt::PlainText);modeBox->addWidget(accountState);
     signInButton=new QPushButton("Mit Microsoft anmelden");signInButton->setObjectName("signInButton");signInButton->setProperty("dynamicText",true);normalLayout->addWidget(signInButton);
     signOutButton=new QPushButton("Abmelden");signOutButton->setObjectName("signOutButton");normalLayout->addWidget(signOutButton);
-    auto *officialLaunch=new QPushButton("Offiziellen Launcher öffnen");officialLaunch->setObjectName("officialLaunch");javaOverride.clear();modeBox->addWidget(officialLaunch);connect(officialLaunch,&QPushButton::clicked,this,&MainWindow::openOfficialLauncher);
+    auto *officialLaunch=new QPushButton("Offizieller\nLauncher");officialLaunch->setToolTip("Open official launcher");officialLaunch->setObjectName("officialLaunch");side->insertWidget(side->count()-2,officialLaunch);officialLaunch->setProperty("quiet",true);connect(officialLaunch,&QPushButton::clicked,this,&MainWindow::openOfficialLauncher);
     credentialPanel=new QWidget;credentialPanel->setObjectName("credentialPanel");auto *credentialLayout=new QVBoxLayout(credentialPanel);credentialLayout->setContentsMargins(0,12,0,0);credentialLayout->setSpacing(14);modeBox->addWidget(credentialPanel);
     username=new QLineEdit(credentialPanel);username->setObjectName("username");username->setMaxLength(16);username->setPlaceholderText("Minecraft-Profilname");
     uuid=new QLineEdit(credentialPanel);uuid->setObjectName("uuid");uuid->setMaxLength(36);uuid->setPlaceholderText("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
@@ -154,7 +165,7 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     auto *layoutForm=form();appearanceBox->addLayout(layoutForm);
     auto *sidebarSize=new QSpinBox;sidebarSize->setObjectName("sidebarSize");sidebarSize->setRange(176,240);sidebarSize->setValue(preferences.sidebarWidth);sidebarSize->setSuffix(" px");layoutForm->addRow("Breite der Navigation",sidebarSize);
     auto *spacing=new QSpinBox;spacing->setObjectName("contentSpacing");spacing->setRange(8,24);spacing->setValue(preferences.contentSpacing);spacing->setSuffix(" px");layoutForm->addRow("Abstand der Bereiche",spacing);
-    connect(animate,&QCheckBox::toggled,this,[this](bool on){preferences.animations=on;savePreferences();});
+    connect(animate,&QCheckBox::toggled,this,[this](bool on){preferences.animations=on;if(playerPreview)playerPreview->setAnimated(on && !qApp->property("disableAnimationsForTests").toBool());savePreferences();});
     connect(sidebarSize,&QSpinBox::valueChanged,this,[this,sidebar](int n){preferences.sidebarWidth=n;sidebar->setFixedWidth(n);savePreferences();});
     connect(spacing,&QSpinBox::valueChanged,this,[this,pages](int n){preferences.contentSpacing=n;for(auto *scroll:pages->findChildren<QScrollArea*>(QString(),Qt::FindDirectChildrenOnly))if(scroll->widget() && scroll->widget()->layout())scroll->widget()->layout()->setSpacing(n);savePreferences();});
     auto *rememberWindow=checkbox(appearanceBox,"Fenstergröße merken","rememberWindow",preferences.rememberWindow);
@@ -188,15 +199,15 @@ MainWindow::MainWindow(const AuthEndpoints &authEndpoints):root(Minecraft::defau
     auto *folders=card(tools,"SCHNELLZUGRIFF","Minecraft-Dateien");auto *folderBox=qobject_cast<QVBoxLayout*>(folders->layout());
     for(const auto &name:QStringList{"mods","resourcepacks","screenshots","saves"}){auto *b=new QPushButton(name);folderBox->addWidget(b);connect(b,&QPushButton::clicked,this,[this,name]{const auto path=QDir(root).filePath(name);if(!QDir().mkpath(path)||!QDesktopServices::openUrl(QUrl::fromLocalFile(path)))status("Ordner konnte nicht geöffnet werden.",true);});}
     auto *diagnosticCard=card(tools,"INSTALLATION","Diagnose");auto *diagnosticBox=qobject_cast<QVBoxLayout*>(diagnosticCard->layout());diagnostics=new QLabel;diagnostics->setObjectName("diagnostics");diagnostics->setProperty("dynamicText",true);diagnostics->setWordWrap(true);diagnostics->setTextFormat(Qt::PlainText);diagnosticBox->addWidget(diagnostics);
-    auto *copyReport=new QPushButton("Diagnose kopieren");diagnosticBox->addWidget(copyReport);connect(copyReport,&QPushButton::clicked,this,[this]{qApp->clipboard()->setText("Obsidian 1.0\n"+QDir::toNativeSeparators(root)+"\n"+diagnostics->text()+"\n"+versionInfo->text()+"\n"+javaPathLabel->fullPath());status("Diagnose kopiert. Keine Zugangsdaten enthalten.");});tools->addStretch();
+    auto *copyReport=new QPushButton("Diagnose kopieren");diagnosticBox->addWidget(copyReport);connect(copyReport,&QPushButton::clicked,this,[this]{qApp->clipboard()->setText("Obsidian 1.1\n"+QDir::toNativeSeparators(root)+"\n"+diagnostics->text()+"\n"+versionInfo->text()+"\n"+javaPathLabel->fullPath());status("Diagnose kopiert. Keine Zugangsdaten enthalten.");});tools->addStretch();
     statusText=new QLabel;statusText->setObjectName("status");statusText->setProperty("dynamicText",true);statusText->setTextFormat(Qt::PlainText);statusText->setWordWrap(true);statusText->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);outer->addWidget(statusText);
     auto *footer=new QFrame;footer->setObjectName("launchBar");auto *actions=new QHBoxLayout(footer);actions->setContentsMargins(0,16,0,0);actions->setSpacing(12);
     auto *logButton=new QPushButton("Konsole");actions->addWidget(logButton);stopButton=new QPushButton("Spiel beenden");actions->addWidget(stopButton);
     auto *accountShortcut=new QPushButton("Konto");actions->addWidget(accountShortcut);actions->addStretch();
     launchButton=new QPushButton;launchButton->setObjectName("primary");launchButton->setProperty("dynamicText",true);launchButton->setMinimumWidth(206);actions->addWidget(launchButton);outer->addWidget(footer);
     auto *fadeEffect=new QGraphicsOpacityEffect(pages);pages->setGraphicsEffect(fadeEffect);
-    auto *fade=new QPropertyAnimation(fadeEffect,"opacity",pages);fade->setDuration(150);fade->setEasingCurve(QEasingCurve::OutCubic);
-    connect(pages,&QStackedWidget::currentChanged,this,[this,fade,fadeEffect](int){fade->stop();if(preferences.animations && !qApp->property("disableAnimationsForTests").toBool()){fade->setStartValue(.35);fade->setEndValue(1.);fade->start();}else fadeEffect->setOpacity(1.);});
+    auto *fade=new QPropertyAnimation(fadeEffect,"opacity",pages);fade->setDuration(260);fade->setEasingCurve(QEasingCurve::OutCubic);
+    connect(pages,&QStackedWidget::currentChanged,this,[this,fade,fadeEffect](int){fade->stop();if(preferences.animations && !qApp->property("disableAnimationsForTests").toBool()){fade->setStartValue(.05);fade->setEndValue(1.);fade->start();}else fadeEffect->setOpacity(1.);});
     connect(accountNav,&QPushButton::clicked,this,[pages]{pages->setCurrentIndex(2);});connect(toolsNav,&QPushButton::clicked,this,[pages]{pages->setCurrentIndex(3);});connect(accountShortcut,&QPushButton::clicked,this,[pages,accountNav]{pages->setCurrentIndex(2);accountNav->setChecked(true);});
     connect(showHero,&QCheckBox::toggled,this,[this](bool on){preferences.showHero=on;hero->setVisible(on);savePreferences();});
     connect(rememberWindow,&QCheckBox::toggled,this,[this](bool on){preferences.rememberWindow=on;savePreferences();});
@@ -271,7 +282,14 @@ void MainWindow::updateEnabled() {
     signInButton->setEnabled(!busy);signOutButton->setVisible(auth->signedIn());signOutButton->setEnabled(!busy && auth->signedIn());clientIdEdit->setEnabled(!busy);
     signInButton->setText(Ui::text("Mit Microsoft anmelden"));
     accountState->setText(Ui::text(launchMode->currentData()=="offline"?"Offline · Keine Anmeldung erforderlich":auth->signedIn()?"Konto verbunden":auth->busy()?"Profil wird geprüft …":"Noch kein Konto verbunden"));
-    const auto profile=auth->credentials();if(auto *label=findChild<QLabel*>("libraryAccount"))label->setText(launchMode->currentData()=="offline"?Ui::text("Offline-Spieler: %1").arg(offlineName->text()):auth->signedIn()?Ui::text("Verbunden: %1").arg(profile.username):Ui::text("Noch kein Konto verbunden"));username->setText(profile.username);uuid->setText(profile.uuid);
+    const auto profile=auth->credentials();
+    const bool offline=launchMode->currentData()=="offline";
+    const auto name=offline?offlineName->text():profile.username;
+    playerPreview->setIdentity(offline?"offline:"+name:profile.uuid,offline?QUrl():auth->skinUrl());
+    playerPreview->setAnimated(preferences.animations && !qApp->property("disableAnimationsForTests").toBool());
+    findChild<QLabel*>("dashboardName")->setText(name.isEmpty()?Ui::text("Willkommen bei Obsidian"):Ui::text("Hallo, %1").arg(name));
+    findChild<QLabel*>("dashboardHint")->setText(offline?Ui::text("Offline-Singleplayer · Deine lokale Identität"):auth->signedIn()?Ui::text("Angemeldet · Bereit zum Spielen"):Ui::text("Verbinde dein Konto oder spiele offline."));
+    if(auto *label=findChild<QLabel*>("libraryAccount"))label->setText(launchMode->currentData()=="offline"?Ui::text("Offline-Spieler: %1").arg(offlineName->text()):auth->signedIn()?Ui::text("Verbunden: %1").arg(profile.username):Ui::text("Noch kein Konto verbunden"));username->setText(profile.username);uuid->setText(profile.uuid);
     sessionSummary->setText(auth->signedIn()?Ui::text("Profil: %1\nUUID: %2").arg(profile.username,profile.uuid):QString());
     sessionSummary->setVisible(auth->signedIn() && launchMode->currentData()!="offline");
     launchMode->setEnabled(!busy);favoriteButton->setEnabled(!busy && index>=0 && index<entries.size());
@@ -475,9 +493,11 @@ void MainWindow::login() {
 void MainWindow::rebuildLibrary() {
     if(!libraryList)return;QSignalBlocker block(libraryList);libraryList->clear();
     QVector<int> visible;const auto query=versionSearch->text().trimmed();const auto loader=loaderFilter->currentData().toString();
+    findChild<QPushButton*>("resetFilters")->setVisible(!query.isEmpty() || !loader.isEmpty() || preferences.readyOnly);
     for(int i=0;i<entries.size();++i){const auto &entry=entries[i];if((preferences.readyOnly&&!entry.ready()) || (!query.isEmpty()&&!entry.id.contains(query,Qt::CaseInsensitive)) || (!loader.isEmpty()&&entry.loader!=loader))continue;visible.append(i);}
     if(preferences.favoritesFirst)std::stable_sort(visible.begin(),visible.end(),[this](int a,int b){return preferences.favorites.contains(entries[a].id)>preferences.favorites.contains(entries[b].id);});
     for(int index:visible){const auto &entry=entries[index];auto *item=new QListWidgetItem((preferences.favorites.contains(entry.id)?"★  ":"")+entry.id+"\n"+entry.loader+"  ·  "+Ui::text(entry.ready()?"Startbereit":"Unvollständig"),libraryList);item->setData(Qt::UserRole,entry.id);item->setToolTip(entry.error.isEmpty()?entry.id:Ui::text(entry.error));item->setSizeHint(QSize(0,82));if(versions->currentData().toString()==entry.id)libraryList->setCurrentItem(item);}
+    if(auto *empty=findChild<QLabel*>("emptyLibrary")){empty->setVisible(visible.isEmpty());empty->setText(Ui::text(entries.isEmpty()?"Noch keine Installationen. Installiere Minecraft zuerst im offiziellen Launcher.":"Keine Treffer. Versuche andere Filter."));}
     int ready=0;for(const auto &entry:entries)if(entry.ready())++ready;
     countLabel->setText(Ui::text("%1 angezeigt  ·  %2 startbereit  ·  %3 installiert").arg(visible.size()).arg(ready).arg(entries.size()));
     diagnostics->setText(Ui::text("%1 Profile gefunden. %2 startbereit. %3 benötigen eine Reparatur oder passende Java-Runtime.").arg(entries.size()).arg(ready).arg(entries.size()-ready));

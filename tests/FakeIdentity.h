@@ -12,6 +12,7 @@ public:
     QStringList requests;
     bool rejectProfile=false,pendingFirst=false,denyMinecraft=false,invalidProfile=false,malformedForm=false;
     int polls=0;
+    QJsonArray skins;
     FakeIdentity(){
         if(!server.listen(QHostAddress::LocalHost))qFatal("Local test server failed");
         connect(&server,&QTcpServer::newConnection,this,[this]{while(server.hasPendingConnections()){
@@ -38,7 +39,7 @@ public:
                 else if(route=="/profile"){
                     if(rejectProfile){status=401;result={{"error","private-token-do-not-log"}};}
                     else if(invalidProfile)result={{"id","bad"},{"name","bad profile"}};
-                    else result={{"id",QString(clientId).remove('-')},{"name",data.contains("another-test-token")?"FailPlayer":"Player_One"}};
+                    else result={{"id",QString(clientId).remove('-')},{"name",data.contains("another-test-token")?"FailPlayer":"Player_One"},{"skins",skins}};
                 }
                 else {status=404;result={{"error","unexpected endpoint"}};}
                 const auto body=QJsonDocument(result).toJson(QJsonDocument::Compact);

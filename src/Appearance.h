@@ -22,6 +22,12 @@ inline void applyTheme(QApplication &app,const QString &theme="dark",const QStri
         QFrame#sidebar { background: @input; border-right: 1px solid @line; }
         QWidget#worldBanner QLabel { background: transparent; }
         QFrame#sidebar QLabel { background: transparent; }
+        QFrame#profileCard { background: @panel; border: 1px solid @line; border-radius: 10px; }
+        QFrame#profileCard QLabel { background: transparent; }
+        QWidget#playerPreview { background: transparent; }
+        QLabel#dashboardName { font-size: 22px; font-weight: 600; }
+        QLabel#dashboardHint { color: @muted; }
+        QLabel#emptyLibrary { color: @muted; padding: 12px; }
         QFrame#card { background: @panel; border: 1px solid @line; border-radius: 10px; }
         QWidget#normalPanel, QWidget#credentialPanel, QWidget#offlinePanel { background: transparent; }
         QFrame#launchBar { background: transparent; border: none; border-top: 1px solid @line; border-radius: 0px; }
